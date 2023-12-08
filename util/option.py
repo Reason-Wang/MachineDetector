@@ -32,6 +32,7 @@ class Options():
         self.parser.add_argument('--fc_dropout', type=float, default=0.1)
         self.parser.add_argument('--num_samples', type=int, default=None)
         self.parser.add_argument('--apex', action='store_true')
+        self.parser.add_argument('--target_size', type=int, default=2, help='Target size.')
 
 
     def parse(self):

@@ -57,7 +57,7 @@ from transformers.utils.versions import require_version
 
 
 # Will error if the minimal version of Transformers is not installed. Remove at your own risks.
-check_min_version("4.36.0.dev0")
+# check_min_version("4.36.0.dev0")
 
 logger = get_logger(__name__)
 require_version("datasets>=1.8.0", "To fix: pip install -r examples/pytorch/language-modeling/requirements.txt")
@@ -253,7 +253,7 @@ def parse_args():
     else:
         if args.train_file is not None:
             extension = args.train_file.split(".")[-1]
-            if extension not in ["csv", "json", "txt"]:
+            if extension not in ["csv", "json", "txt", "jsonl"]:
                 raise ValueError("`train_file` should be a csv, json or txt file.")
         if args.validation_file is not None:
             extension = args.validation_file.split(".")[-1]
@@ -356,6 +356,8 @@ def main():
         extension = args.train_file.split(".")[-1]
         if extension == "txt":
             extension = "text"
+        if extension == "jsonl":
+            extension = "json"
         raw_datasets = load_dataset(extension, data_files=data_files)
         # If no validation data is there, validation_split_percentage will be used to divide the dataset.
         if "validation" not in raw_datasets.keys():
@@ -387,11 +389,19 @@ def main():
 
     if args.tokenizer_name:
         tokenizer = AutoTokenizer.from_pretrained(
-            args.tokenizer_name, use_fast=not args.use_slow_tokenizer, trust_remote_code=args.trust_remote_code
+            args.tokenizer_name,
+            use_fast=not args.use_slow_tokenizer,
+            trust_remote_code=args.trust_remote_code,
+            padding=True,
+            truncation=True,
         )
     elif args.model_name_or_path:
         tokenizer = AutoTokenizer.from_pretrained(
-            args.model_name_or_path, use_fast=not args.use_slow_tokenizer, trust_remote_code=args.trust_remote_code
+            args.model_name_or_path,
+            use_fast=not args.use_slow_tokenizer,
+            trust_remote_code=args.trust_remote_code,
+            padding=True,
+            truncation=True,
         )
     else:
         raise ValueError(

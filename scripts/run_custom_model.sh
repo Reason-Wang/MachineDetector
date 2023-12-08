@@ -1,6 +1,6 @@
 python train.py \
   --name test_run \
-  --model_name_or_path roberta-base \
+  --model_name_or_path bert-base-uncased \
   --batch_size 16 \
   --seed 42 \
   --scheduler cosine \

@@ -16,6 +16,7 @@ import numpy as np
 from sklearn import metrics
 import gc
 
+
 def validate_fn(model, val_loader, criterion, device):
     model.eval()
     losses = AverageMeter()
@@ -31,10 +32,10 @@ def validate_fn(model, val_loader, criterion, device):
                 inputs[k] = v.to(device)
             labels = labels.to(device)
             batch_size = labels.size(0)
-            pred = model(inputs)
+            logits = model(inputs)
             # print(pred.shape)
-            preds.append(pred.detach().cpu().numpy())
-            loss = criterion(pred.squeeze(dim=1), labels)
+            preds.append(logits.detach().cpu().numpy())
+            loss = criterion(logits, labels)
             losses.update(loss.item(), batch_size)
             end = time.time()
     predictions = np.concatenate(preds, axis=0)
@@ -53,14 +54,16 @@ def train_fn(model, train_loader, criterion, optimizer, epoch, scheduler, device
             inputs[k] = v.to(device)
         labels = labels.to(device)
         batch_size = labels.size(0)
-        pred = model(inputs)
-        loss = criterion(pred.squeeze(dim=1), labels)
+        logits = model(inputs)
+        loss = criterion(logits, labels)
         if opt.gradient_accumulation_steps > 1:
             loss = loss / opt.gradient_accumulation_steps
         losses.update(loss.item(), batch_size)
         scaler.scale(loss).backward()
-        # grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), CFG.max_grad_norm)
-        grad_norm = 0
+        if opt.gradient_clipping:
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), opt.max_grad_norm)
+
         if (step + 1) % opt.gradient_accumulation_steps == 0:
             scaler.step(optimizer)
             scaler.update()
@@ -68,16 +71,8 @@ def train_fn(model, train_loader, criterion, optimizer, epoch, scheduler, device
             global_step += 1
             scheduler.step()
 
-        # end = time.time()
-        # if CFG.do_eval and (step % CFG.eval_freq == CFG.eval_freq - 1):
-        #     # eval
-        #     avg_val_loss, predictions = validate_fn(model, val_loader, criterion, device)
-        #     # scoring
-        #     score = get_score(val_ds, predictions)
-        #     LOGGER.info(f"step {step}: score {score:.4f}")
-
         tbar.set_description(
-            f"Epoch {epoch + 1} Loss: {losses.avg:.4f} lr: {scheduler.get_last_lr()[0]:.8f} grad_norm: {grad_norm:.2f}")
+            f"Epoch {epoch + 1} Loss: {losses.avg:.4f} lr: {scheduler.get_last_lr()[0]:.8f} ")
         # tbar.set_description(f"Epoch {epoch+1} Loss: {losses.avg:.4f} lr: {CFG.lr:.8f} grad_norm: {grad_norm:.2f}")
 
     return losses.avg
@@ -90,7 +85,7 @@ def train_loop(train_ds, val_ds, opt):
     # loader
     # ====================================================
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    tokenizer = AutoTokenizer.from_pretrained('roberta-large')
+    tokenizer = AutoTokenizer.from_pretrained(opt.model_name_or_path)
     model = CustomModel(opt.model_name_or_path)
     model.to(device)
 
@@ -141,8 +136,7 @@ def train_loop(train_ds, val_ds, opt):
     # ====================================================
     # loop
     # ====================================================
-    # criterion = nn.CrossEntropyLoss()
-    criterion = nn.BCELoss()
+    criterion = nn.CrossEntropyLoss()
     best_score = 0.0
 
     for epoch in range(opt.epochs):
@@ -178,7 +172,7 @@ def get_score(val_ds, preds):
     for i in range(len(val_ds)):
         gold_label = val_ds[i]['label']
         gold.append(gold_label)
-    preds = preds > 0.5
+    preds = np.argmax(preds, axis=1)
     macro_f1 = metrics.f1_score(gold, preds, average='macro')
     micro_f1 = metrics.f1_score(gold, preds, average='micro')
     accuracy = metrics.accuracy_score(gold, preds)
@@ -192,7 +186,7 @@ def get_score(val_ds, preds):
 
 def get_final_score(ds, opt):
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    tokenizer = AutoTokenizer.from_pretrained('roberta-large')
+    tokenizer = AutoTokenizer.from_pretrained(opt.model_name_or_path)
     collator = ClassificationCollator(tokenizer, opt.max_len)
     data_loader = DataLoader(ds,
                         batch_size=opt.batch_size * 2,

@@ -1,0 +1,1 @@
+python data/scorer.py --gold_file_path data/SubtaskA/subtaskA_dev_monolingual.jsonl --pred_file_path data/preds/subtaskA_dev_monolingual_roberta-base_0.json

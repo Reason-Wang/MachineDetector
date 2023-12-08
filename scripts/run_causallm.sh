@@ -1,0 +1,12 @@
+python train_llm.py \
+  --model_name_or_path meta-llama/Llama-2-7b-hf \
+  --output_dir ckpts/llama-2-7b/ \
+  --save_strategy "no" \
+  --learning_rate 1e-5 \
+  --per_device_train_batch_size 2 \
+  --gradient_accumulation_steps 2 \
+  --gradient_checkpointing False \
+  --cache_dir /root/autodl-tmp/llama/hf \
+  --fp16 True \
+  --max_steps 2 \
+  --logging_steps 1

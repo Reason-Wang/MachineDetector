@@ -2,3 +2,5 @@
 scripts/cscc
 *.json
 *.jsonl
+*.ipynb
+scripts/dl-labs

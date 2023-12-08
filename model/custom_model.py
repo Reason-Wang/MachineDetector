@@ -11,12 +11,12 @@ def mean_pooling(model_output, attention_mask):
 
 
 class CustomModel(nn.Module):
-    def __init__(self, model_name_or_path, fc_dropout=0.1):
+    def __init__(self, model_name_or_path, fc_dropout=0.1, target_size=2):
         super().__init__()
         self.config = AutoConfig.from_pretrained(model_name_or_path)
         self.model = AutoModel.from_pretrained(model_name_or_path)
         self.fc_dropout = nn.Dropout(fc_dropout)
-        self.fc = nn.Linear(self.config.hidden_size, 1)
+        self.fc = nn.Linear(self.config.hidden_size, target_size)
 
     def feature(self, inputs):
         outputs = self.model(**inputs)
@@ -27,5 +27,6 @@ class CustomModel(nn.Module):
 
     def forward(self, inputs):
         feature = self.feature(inputs)
-        output = torch.sigmoid(self.fc(self.fc_dropout(feature)))
-        return output
+        logits = self.fc(self.fc_dropout(feature))
+        return logits
+
