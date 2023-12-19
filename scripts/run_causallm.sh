@@ -2,11 +2,13 @@ python train_llm.py \
   --model_name_or_path meta-llama/Llama-2-7b-hf \
   --output_dir ckpts/llama-2-7b/ \
   --save_strategy "no" \
-  --learning_rate 1e-5 \
+  --learning_rate 4e-5 \
+  --lr_scheduler_type cosine \
+  --warmup_ratio 0.01 \
   --per_device_train_batch_size 2 \
-  --gradient_accumulation_steps 2 \
+  --max_text_length 512 \
+  --gradient_accumulation_steps 16 \
   --gradient_checkpointing False \
-  --cache_dir /root/autodl-tmp/llama/hf \
+  --max_steps 5000 \
   --fp16 True \
-  --max_steps 2 \
   --logging_steps 1

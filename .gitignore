@@ -4,3 +4,4 @@ scripts/cscc
 *.jsonl
 *.ipynb
 scripts/dl-labs
+ckpts
